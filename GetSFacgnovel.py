@@ -1,47 +1,55 @@
 from bs4 import BeautifulSoup
-import urllib.request
+import requests
 import ssl
 ssl._create_default_https_context = ssl._create_unverified_context
 
-#get the menu page
+#get index page
 url = 'http://book.sfacg.com/Novel/41889/MainIndex/'
-resp = urllib.request.urlopen(url).read()
-soup = BeautifulSoup(resp, 'html.parser')
+resp = requests.get(url).text
+index = BeautifulSoup(resp, 'html.parser')
 
-#book name
-book = soup.find('h1').text
-print (book)
-filename = book + ".txt"
+#find novel name in <h1> under <div class="story-head"> and use it as output txt file name
+novelname = index.find('h1', class_="story-title").text
+print (novelname)
+filename = novelname + ".txt"
 f = open(filename, 'w', encoding = 'utf-8')
-f.write(book + '\n'*2)
+f.write(novelname + '\n'*2)
 
-#chapter
-chapter = soup.find_all('h3')
-for ch in range(len(chapter)):
-        print (chapter[ch].text)
+#find titles of chapters in <div class="story-catalog"> tags
+chapters = index.findAll('div', class_='story-catalog')
+chaptercount = 1
+for chapter in chapters:       
+        chapternum = r"%02d" % chaptercount
+        chaptertitle = chapter.find('h3').text 
+        f.write(chaptertitle + '\n'*2)
+        print (chapternum, chaptertitle) 
 
-#content 
-links = soup.find_all('div', class_='story-catalog')
-for x in links: 
-        chtitle = x.find('h3') 
-        print (chtitle.text) 
-        f.write(chtitle.text + '\n'*2)
-        c1 = x.find_all('li') 
-        for i in c1:
-                c2 = i.find('a', href=True)
-                raw = 'http://book.sfacg.com'
-                new = raw + c2['href']
-##                print (new)
-                nresp = urllib.request.urlopen(new)
-                nsoup = BeautifulSoup(nresp, 'html.parser')
-                a = nsoup.find_all('p')
-                b = nsoup.find('div', 'list_menu_title').text
-##                print (b)
-                f.write(b + '\n'*2)
-                for i in range(len(a)):
-                        f.write(a[i].text + '\n')
-                        f.write('\n')
+        #find paths of sections of a chapter in <a> under <li> tags
+        sectionpaths = chapter.findAll('li')
+        sectioncount = 1
+        for sectionpath in sectionpaths:
+                pathurl = sectionpath.find('a', href=True)
 
+                #compile urls of sections and get sections
+                host = 'http://book.sfacg.com'
+                sectionurl = host + pathurl['href']
+                nresp = requests.get(sectionurl).text
+                section = BeautifulSoup(nresp, 'html.parser')
+
+                #find title of a section in <div class="list_menu_title"> tag in a section page
+                sectiontitle = section.find('div', 'list_menu_title').text
+                sectionnum = r"%02d" % sectioncount
+                f.write(sectiontitle + '\n'*2)
+                print (chapternum, sectionnum, sectiontitle)
+                sectioncount += 1
+
+                #find paragraphs in <p> tags
+                paragraph = section.findAll('p')
+                for p in paragraph:
+                        f.write(p.text + '\n'*2)
+                
+        chaptercount += 1
+        
 f.close()
 
-print ("All chapters are exported")
+print ("All chapters are saved")
