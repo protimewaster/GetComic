@@ -20,5 +20,6 @@ for chapter in range(852,853): #The starting and ending nos of the chapters
 	        path = chapterno + "-" + filenum + ".jpg"
 	        picurl = host + path
 	        data = urllib.request.urlretrieve(picurl, path)
+		count += 1
 
 print ('Work Done')
